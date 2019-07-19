@@ -37,12 +37,12 @@ class Email implements Template
             $mail->Port = $config['port'];
             $mail->setFrom($config['username'], $config['send_name']);
             if (is_string($to)) {
-                $mail->addAddress($to, '');
-            } else {
-                foreach ($to as $v) {
-                    $mail->addAddress($v, '');
-                }
+                $to = explode(',', $to);
             }
+            foreach ($to as $v) {
+                $mail->addAddress($v, '');
+            }
+            
             $mail->addReplyTo($config['username'], 'info');
             $mail->isHTML($config['is_html']);
             $mail->Subject = $title;

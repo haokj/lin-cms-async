@@ -2,43 +2,55 @@
 
 namespace LinCmsAsync;
 
-use think\Container;
-use think\swoole\facade\Task;
+use LinCmsAsync\lib\SwooleClient;
 
 /**
  * Class LinTask
  * @package app\lib\task
- * @method void email(string $to, string $title, $content) static 发送邮件
+ * @method void email(void $to, string $title, $content) static 发送邮件
  */
 class LinTask
 {
-    /**
-     * 调用自定义任务
-     * @param $class
-     * @param $params
-     * @return void
-     */
-    public static function custom($class, $params)
+    public static function __callStatic($method, $args)
     {
-        self::__callStatic($class, $params);
+        $class = self::getClass($method, $args);
+        $data = [
+            'class' => $class,
+            'method' => $method,
+            'data' => $args
+        ];
+        SwooleClient::getInstance()->sSend(json_encode($data));
     }
 
     /**
-     * @param $class
-     * @param $arguments
+     * @param string $method 方法名
+     * @param array $args 参数
+     * @throws \Exception
+     * @return string
      */
-    public static function __callStatic($class, $arguments)
+    public static function getClass(&$method, &$args)
     {
-        $libPath = config('lin_task.lib_path') ?? 'app\lib\task';
-        $complete_namespace = $libPath . '\\' . ucfirst($class);
-        self::asyncTask($complete_namespace, $arguments);
-    }
 
-    protected static function asyncTask($class, $arguments)
-    {
-        Task::async(function () use ($class, $arguments) {
-            $class = Container::get($class);
-            $class->run($arguments);
-        });
+        if($method == 'email' && (
+            (!isset($args[0])) || !is_string($args[0]) || (!class_exists($args[0]))  
+            )) {
+            $class = 'LinCmsAsync\\template\\Email';
+            $method = 'run';
+        } else {
+            if (is_array($args) && isset($args[0]) && !empty($args[0])) {
+                if (!class_exists($args[0])) {
+                    throw new \Exception('自定义类不存在：'.$args[0]);
+                } else if (!method_exists($args[0], $method)) {
+                    throw new \Exception('自定义方法不存在：'.$method);
+                } else {
+                    $class = $args[0];
+                    array_shift($args);
+                }
+            } else {
+                throw new \Exception('参数错误');
+            }
+        }
+        
+        return $class;
     }
 }
