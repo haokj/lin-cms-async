@@ -22,7 +22,7 @@ class Email implements Template
 
     private function sendEmail($to, $title, $content)
     {
-        if ((!is_array($to) && !is_string($to)) || empty($to))
+        if (empty($to))
             return '';
         $config = Config::pull('email');
         try {
@@ -53,9 +53,9 @@ class Email implements Template
 //            $mail->addAttachment('/tmp/image.jpg', 'new.jpg');    // Optional name 发送附件并重命名
             $mail->send();
             return true;
-        } catch (Exception $e) {
+        } catch (\Exception $e) {
             //或日志记录
-            throw new PushException([
+            throw new \Exception([
                 'code' => '500',
                 'msg' => '邮件发送失败：', $mail->ErrorInfo
             ]);
